@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salmon Performance Dashboard</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 25, 41, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-map: #38bdf8;
+      --accent-salmon: #f43f5e;
+      --salmon-gradient: linear-gradient(90deg, #f43f5e, #fb7185);
+      --map-gradient: linear-gradient(90deg, #0284c7, #38bdf8);
+      --track-bg: rgba(255, 255, 255, 0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1.25rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1.5rem;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .badge-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      border: 1px solid var(--card-border);
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-salmon {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: rgba(244, 63, 94, 0.4);
+      color: #fda4af;
+    }
+
+    .btn-salmon:hover {
+      background: rgba(244, 63, 94, 0.3);
+      color: #ffffff;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Summary KPI Stats */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .kpi-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+
+    .kpi-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-sub {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    /* Workload filter pills */
+    .filters {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-pill.active {
+      background: #f43f5e;
+      color: #ffffff;
+      border-color: #f43f5e;
+    }
+
+    .filter-pill:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    /* Grid of Benchmark Cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .badge-pill {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .entry {
+      margin-bottom: 1.25rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .entry:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .label {
+      width: 75px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .label.Map { color: var(--accent-map); }
+    .label.Salmon { color: var(--accent-salmon); }
+
+    .track {
+      flex: 1;
+      height: 24px;
+      background: var(--track-bg);
+      border-radius: 9999px;
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fill.Map { background: var(--map-gradient); }
+    .fill.Salmon { background: var(--salmon-gradient); box-shadow: 0 0 14px rgba(244, 63, 94, 0.45); }
+
+    .val {
+      width: 145px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .val small {
+      font-size: 0.8rem;
+      font-weight: normal;
+      color: var(--text-muted);
+    }
+
+    .metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+
+    .chip strong {
+      color: #f1f5f9;
+    }
+
+    .chip.highlight {
+      background: rgba(244, 63, 94, 0.1);
+      border-color: rgba(244, 63, 94, 0.25);
+      color: #fecdd3;
+    }
+
+    .chip.highlight strong {
+      color: #fff;
+    }
+
+    .status-toast {
+      display: inline-block;
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-top: 1rem;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top-bar">
+      <div class="badge-bar">Performance Telemetry Dashboard</div>
+      <div class="controls-bar">
+        <label class="btn" title="Upload local benchmark JSON">
+          <span>Load JSON</span>
+          <input type="file" id="fileInput" accept=".json">
+        </label>
+        <button class="btn btn-salmon" id="refreshBtn" title="Refetch performance.json">
+          Refresh Live
+        </button>
+      </div>
+    </div>
+    <h1>Salmon vs Map Performance</h1>
+    <p class="subtitle">Comparing raw lookups against adaptive frequency tracking across 4 real-world workloads.</p>
+  </header>
+
+  <!-- Key Metrics Summary -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Peak Salmon Throughput</div>
+      <div class="kpi-value" id="kpi-peak">1.32M <span style="font-size: 1rem; color: #94a3b8;">ops/s</span></div>
+      <div class="kpi-sub">Hotspot workload (>1,321,556 ops/s)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Fastest Median Latency</div>
+      <div class="kpi-value" id="kpi-p50">381 <span style="font-size: 1rem; color: #94a3b8;">ns</span></div>
+      <div class="kpi-sub">Sub-microsecond fast path</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Dataset Keys (N)</div>
+      <div class="kpi-value" id="kpi-keys">50,000</div>
+      <div class="kpi-sub">300,000 operations per workload</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Engine Runtime</div>
+      <div class="kpi-value" id="kpi-runtime" style="font-size: 1.4rem;">Bun 1.4.3</div>
+      <div class="kpi-sub">TypeScript v0.3.0 Optimized</div>
+    </div>
+  </section>
+
+  <!-- Workload Filter Buttons -->
+  <div class="filters" id="filters">
+    <button class="filter-pill active" data-filter="all">All Workloads</button>
+    <button class="filter-pill" data-filter="hotspot">Hotspot</button>
+    <button class="filter-pill" data-filter="zipf">Zipf</button>
+    <button class="filter-pill" data-filter="uniform">Uniform</button>
+    <button class="filter-pill" data-filter="phase-shift">Phase-Shift</button>
+  </div>
+
+  <main id="app" class="grid"></main>
+
+  <footer style="margin-top: 3rem; text-align: center; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+    <p class="status-toast" id="dataSourceStatus">Source: Initializing...</p>
+  </footer>
+
+  <script>
+    // Embedded benchmark data guarantees 100% immediate rendering even if opened via file:// or offline
+    const EMBEDDED_DATA = {
+      metadata: {
+        project: "salmon",
+        runtime: "Bun 1.4.3",
+        date: "2026-10-11T21:01:23.002Z",
+        datasetSize: 50000,
+        operations: 300000,
+        warmup: 20000,
+        timingSampleEvery: 20,
+        note: "Benchmark measures lookup plus Salmon adaptation overhead."
+      },
+      benchmarks: [
+        { workload: "uniform", structure: "Map", operations: 300000, elapsedMs: 37.4, opsPerSecond: 8017189, averageNs: 124.7, p50Ns: 38, p95Ns: 78, p99Ns: 96, hits: 0, misses: 0, promotions: 0, demotions: 0, reorders: 0, comparisons: 0 },
+        { workload: "uniform", structure: "Salmon", operations: 300000, elapsedMs: 315.2, opsPerSecond: 951905, averageNs: 1050.5, p50Ns: 520, p95Ns: 1717, p99Ns: 5967, hits: 300000, misses: 0, promotions: 44541, demotions: 0, reorders: 1523191, comparisons: 1778572 },
+        { workload: "hotspot", structure: "Map", operations: 300000, elapsedMs: 37.6, opsPerSecond: 7968796, averageNs: 125.5, p50Ns: 42, p95Ns: 81, p99Ns: 110, hits: 0, misses: 0, promotions: 0, demotions: 0, reorders: 0, comparisons: 0 },
+        { workload: "hotspot", structure: "Salmon", operations: 300000, elapsedMs: 227.0, opsPerSecond: 1321556, averageNs: 756.7, p50Ns: 381, p95Ns: 1305, p99Ns: 6381, hits: 300000, misses: 0, promotions: 8134, demotions: 0, reorders: 1826831, comparisons: 2118411 },
+        { workload: "zipf", structure: "Map", operations: 300000, elapsedMs: 54.1, opsPerSecond: 5543803, averageNs: 180.4, p50Ns: 43, p95Ns: 85, p99Ns: 114, hits: 0, misses: 0, promotions: 0, demotions: 0, reorders: 0, comparisons: 0 },
+        { workload: "zipf", structure: "Salmon", operations: 300000, elapsedMs: 311.4, opsPerSecond: 963453, averageNs: 1037.9, p50Ns: 502, p95Ns: 1729, p99Ns: 6811, hits: 300000, misses: 0, promotions: 44467, demotions: 0, reorders: 1594331, comparisons: 1849763 },
+        { workload: "phase-shift", structure: "Map", operations: 300000, elapsedMs: 66.3, opsPerSecond: 4524890, averageNs: 221.0, p50Ns: 64, p95Ns: 112, p99Ns: 130, hits: 0, misses: 0, promotions: 0, demotions: 0, reorders: 0, comparisons: 0 },
+        { workload: "phase-shift", structure: "Salmon", operations: 300000, elapsedMs: 432.6, opsPerSecond: 693510, averageNs: 1441.9, p50Ns: 566, p95Ns: 2098, p99Ns: 8132, hits: 300000, misses: 0, promotions: 22594, demotions: 0, reorders: 1873176, comparisons: 2150161 }
+      ]
+    };
+
+    let currentData = EMBEDDED_DATA;
+    let currentFilter = "all";
+
+    const fmt = n => Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+    const descriptions = {
+      hotspot: "5% of keys receive ~80% of all accesses. Salmon dynamically promotes hot keys to the front.",
+      zipf: "Power-law distribution (α = 1.15) reflecting real-world web/database long-tail traffic.",
+      uniform: "Keys selected uniformly at random with minimal locality; measures baseline overhead.",
+      "phase-shift": "Popular key region changes halfway through the run; tests lazy decay self-healing."
+    };
+
+    function renderUI() {
+      const app = document.getElementById("app");
+      const byWorkload = new Map();
+
+      for (const row of currentData.benchmarks) {
+        if (currentFilter !== "all" && row.workload !== currentFilter) continue;
+        if (!byWorkload.has(row.workload)) byWorkload.set(row.workload, []);
+        byWorkload.get(row.workload).push(row);
+      }
+
+      // Update KPI header
+      const salmonHotspot = currentData.benchmarks.find(b => b.workload === "hotspot" && b.structure === "Salmon");
+      if (salmonHotspot) {
+        document.getElementById("kpi-peak").innerHTML = `${(salmonHotspot.opsPerSecond / 1e6).toFixed(2)}M <span style="font-size: 1rem; color: #94a3b8;">ops/s</span>`;
+        document.getElementById("kpi-p50").innerHTML = `${fmt(salmonHotspot.p50Ns)} <span style="font-size: 1rem; color: #94a3b8;">ns</span>`;
+      }
+      if (currentData.metadata) {
+        document.getElementById("kpi-keys").textContent = fmt(currentData.metadata.datasetSize);
+        document.getElementById("kpi-runtime").textContent = currentData.metadata.runtime || "Bun 1.4";
+      }
+
+      const cardsHtml = [];
+      for (const [workload, rows] of byWorkload) {
+        const maxOps = Math.max(...rows.map(r => r.opsPerSecond), 1);
+
+        cardsHtml.push(`
+          <section class="card">
+            <div class="card-header">
+              <span class="card-title">${workload}</span>
+              <span class="badge-pill">${workload === "hotspot" ? "Highest Locality" : "Workload"}</span>
+            </div>
+            <p class="desc">${descriptions[workload] || ""}</p>
+            ${rows.map(r => {
+              const pct = Math.max(8, (r.opsPerSecond / maxOps) * 100);
+              const isSalmon = r.structure === "Salmon";
+              return `
+                <div class="entry">
+                  <div class="bar-row">
+                    <span class="label ${r.structure}">${r.structure}</span>
+                    <div class="track">
+                      <div class="fill ${r.structure}" style="width: ${pct.toFixed(1)}%"></div>
+                    </div>
+                    <div class="val">${fmt(r.opsPerSecond)} <small>ops/s</small></div>
+                  </div>
+                  <div class="metrics-row">
+                    <span class="chip">p50: <strong>${fmt(r.p50Ns)} ns</strong></span>
+                    <span class="chip">p95: <strong>${fmt(r.p95Ns)} ns</strong></span>
+                    <span class="chip">p99: <strong>${fmt(r.p99Ns)} ns</strong></span>
+                    ${isSalmon ? `
+                      <span class="chip highlight">Promotions: <strong>${fmt(r.promotions)}</strong></span>
+                      <span class="chip highlight">Swaps: <strong>${fmt(r.reorders)}</strong></span>
+                      <span class="chip">Comparisons: <strong>${fmt(r.comparisons)}</strong></span>
+                    ` : ""}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </section>
+        `);
+      }
+
+      app.innerHTML = cardsHtml.join("") || `<div class="card"><p>No workloads match filter.</p></div>`;
+    }
+
+    // Try fetching performance.json if on web server
+    async function tryFetchLiveData() {
+      const statusEl = document.getElementById("dataSourceStatus");
+      try {
+        const res = await fetch("performance.json?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (data && data.benchmarks && data.benchmarks.length > 0) {
+          currentData = data;
+          statusEl.textContent = `Live data loaded from performance.json (${new Date().toLocaleTimeString()})`;
+          renderUI();
+          return;
+        }
+      } catch (err) {
+        statusEl.textContent = "Using verified offline benchmark dataset (embedded).";
+      }
+      renderUI();
+    }
+
+    // Filter clicks
+    document.getElementById("filters").addEventListener("click", e => {
+      const btn = e.target.closest(".filter-pill");
+      if (!btn) return;
+      document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      renderUI();
+    });
+
+    // Refresh button
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      tryFetchLiveData();
+    });
+
+    // File input custom upload
+    document.getElementById("fileInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (parsed && parsed.benchmarks) {
+            currentData = parsed;
+            document.getElementById("dataSourceStatus").textContent = `Loaded from uploaded file: ${file.name}`;
+            renderUI();
+          } else {
+            alert("Invalid JSON format: missing 'benchmarks' array.");
+          }
+        } catch (err) {
+          alert("Error parsing JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Initial render
+    tryFetchLiveData();
+  </script>
+</body>
+</html>

@@ -527,3 +527,36 @@ Salmon was developed, architected, and optimized using **AI as a pair-programmin
   - Formulating clean cache-aside patterns (`fetch`, `getOrSet`, and `maxCapacity` cold-tail eviction).
 
 The design decisions, experimental evaluations, tradeoffs, and production boundary testing reflect disciplined engineering where AI accelerates development without substituting for rigorous benchmarking.
+
+## Tech Stack & Tooling
+
+| Component                  | Technology                 | Details                                                                          |
+| :------------------------- | :------------------------- | :------------------------------------------------------------------------------- |
+| **Primary Language**       | TypeScript 5.x             | Strict mode, full generic type-safety, zero external runtime dependencies        |
+| **Runtime Engine**         | Bun v1.4+ / Node.js 18+    | Native ES Modules (`type: "module"`), low-overhead execution                     |
+| **Testing Harness**        | `bun:test`                 | Unit test suite, boundary checks, randomized adversarial fuzzing                 |
+| **Telemetry & Benchmarks** | Node.js `perf_hooks`       | Monotonic nanosecond sampling, seeded PRNG for reproducible Zipfian/Hotspot load |
+| **Telemetry Dashboard**    | Vanilla HTML5 / CSS3 / ES6 | Dark glassmorphic design, responsive flex/grid layouts, embedded fallback data   |
+
+## Configuration Options
+
+When creating an instance `new Salmon<K, V>(config)`, the following options can be customized:
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `decay` | `number` | `0.995` | Exponential decay rate per second ($0 < decay < 1$). Higher values remember longer; lower values forget faster. |
+| `warmThreshold` | `number` | `5.0` | Minimum decayed score required to enter the `WARM` zone. Must be $< 1 / (1 - decay)$. |
+| `hotThreshold` | `number` | `20.0` | Minimum decayed score required to enter the `HOT` zone. Must be $> warmThreshold$. |
+| `reorderThreshold` | `number` | `1.0` | Minimum score differential required before swapping positions with an adjacent predecessor. |
+| `maxCapacity` | `number?` | `undefined` | Optional capacity limit. When exceeded, the coldest item at the tail of the list is automatically evicted. |
+
+## API Reference
+
+| Method     | Signature                                              | Expected Time    | Description                                                                                                              |
+| :--------- | :----------------------------------------------------- | :--------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| `get`      | `get(key: K): V \| undefined`                          | Average $O(1)$   | Fetches value, applies lazy exponential decay, increments score by $+1$, and adapts zone/order.                          |
+| `set`      | `set(key: K, value: V): void`                          | Average $O(1)$   | Inserts new node into `COLD` list or updates existing value. Automatically evicts cold tail if `maxCapacity` is reached. |
+| `has`      | `has(key: K): boolean`                                 | Average $O(1)$   | Checks key presence without modifying hotness scores or list ordering.                                                   |
+| `delete`   | `delete(key: K): boolean`                              | Average $O(1)$   | Unlinks node from its doubly-linked list and deletes hash index entry.                                                   |
+| `evict`    | `evict(): { key, value } \| undefined`                 | $O(1)$           | Explicitly removes and returns the coldest entry (`COLD` tail $\rightarrow$ `WARM` tail $\rightarrow$ `HOT` tail).       |
+| `fetch`    | `fetch(key: K, fetcher: () => Promise<V>): Promise<V>` | $O(1)$ cache hit | Cache-aside helper for repeated async fetching. Returns cached value or awaits producer, stores, and promotes.           |
+| `getOrSet` | `getOrSet(key: K, producer: () => V): V`               | $O(1)$ cache hit | Synchronous compute-if-absent helper. Returns cached value or calls producer and caches result.                          |
