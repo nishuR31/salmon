@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Salmon } from "./index";
+import { Salmon } from "./salmon";
 
 describe("Salmon", () => {
   test("uses the Map for exact lookup", () => {
@@ -188,5 +188,83 @@ describe("Salmon", () => {
     expect(check.mapSize).toBe(s.size);
     expect(check.listSize).toBe(s.size);
   });
+
+  test("evicts coldest keys automatically when maxCapacity is exceeded", () => {
+    const s = new Salmon<string, number>({
+      decay: 0.95,
+      warmThreshold: 3,
+      hotThreshold: 8,
+      maxCapacity: 3,
+    });
+
+    s.set("k1", 1);
+    s.set("k2", 2);
+    s.set("k3", 3);
+
+    // Make k1 hot
+    for (let i = 0; i < 15; i++) s.get("k1");
+    // Make k2 warm
+    for (let i = 0; i < 5; i++) s.get("k2");
+    // k3 is untouched, remains cold at tail
+
+    expect(s.getZone("k1")).toBe("hot");
+    expect(s.getZone("k2")).toBe("warm");
+    expect(s.getZone("k3")).toBe("cold");
+
+    // Inserting 4th item must trigger eviction of k3 (cold tail)
+    s.set("k4", 4);
+
+    expect(s.size).toBe(3);
+    expect(s.has("k3")).toBe(false); // Cold item evicted!
+    expect(s.has("k1")).toBe(true);  // Hot item protected
+    expect(s.has("k2")).toBe(true);  // Warm item protected
+    expect(s.has("k4")).toBe(true);
+    expect(s.getStats().evictions).toBe(1);
+    expect(s.validateStructure().valid).toBe(true);
+  });
+
+  test("getOrSet and fetch cache-aside helpers resolve repeated calls without refetching", async () => {
+    const s = new Salmon<string, string>({
+      decay: 0.95,
+      warmThreshold: 3,
+      hotThreshold: 8,
+    });
+
+    let syncFetches = 0;
+    const getter = (key: string) => {
+      syncFetches++;
+      return `val_${key}`;
+    };
+
+    // First call calls factory
+    const v1 = s.getOrSet("user:101", getter);
+    expect(v1).toBe("val_user:101");
+    expect(syncFetches).toBe(1);
+
+    // Repeated call uses cache directly
+    const v2 = s.getOrSet("user:101", getter);
+    expect(v2).toBe("val_user:101");
+    expect(syncFetches).toBe(1); // Not called again!
+
+    let asyncFetches = 0;
+    const asyncFetcher = async (key: string) => {
+      asyncFetches++;
+      return `async_${key}`;
+    };
+
+    // First async call
+    const a1 = await s.fetch("product:99", asyncFetcher);
+    expect(a1).toBe("async_product:99");
+    expect(asyncFetches).toBe(1);
+
+    // Repeated async call uses cache
+    const a2 = await s.fetch("product:99", asyncFetcher);
+    expect(a2).toBe("async_product:99");
+    expect(asyncFetches).toBe(1); // Not called again!
+
+    // Verify it learned and promoted product:99
+    expect(s.getHotness("product:99")!).toBeGreaterThan(1);
+  });
 });
+
 

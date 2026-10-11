@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import Salmon from "./index";
+import Salmon from "./salmon";
 
 type Workload = "uniform" | "hotspot" | "zipf" | "phase-shift";
 

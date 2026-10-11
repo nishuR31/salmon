@@ -4,6 +4,13 @@
   "private": true,
   "description": "Experimental adaptive frequency-aware key-value data structure",
   "type": "module",
+  "main": "index.ts",
+  "module": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./salmon": "./salmon.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",

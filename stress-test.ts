@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import { Salmon } from "./index";
+import { Salmon } from "./salmon";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -131,7 +131,7 @@ for (let i = 0; i < STRESS_OPS; i++) {
 const elapsedStress = performance.now() - startStress;
 const stats = salmon.getStats();
 
-console.log(`✓ Completed in ${(elapsedStress / 1000).toFixed(2)}s`);
+console.log(`[DONE] Completed in ${(elapsedStress / 1000).toFixed(2)}s`);
 console.log(`• Sustained Throughput: ${(STRESS_OPS / (elapsedStress / 1000)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ops/sec`);
 console.log(`• Avg Latency:         ${((elapsedStress * 1_000_000) / STRESS_OPS).toFixed(1)} ns`);
 console.log(`• p50 Latency:         ${percentile(times, 0.50).toFixed(1)} ns`);

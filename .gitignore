@@ -1,1 +1,14 @@
+# Dependencies
 node_modules/
+
+# Compiled C++ files & binaries
+index.cpp
+*.o
+*.out
+*.exe
+
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp

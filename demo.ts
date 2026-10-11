@@ -1,4 +1,4 @@
-import { Salmon } from "./index";
+import { Salmon } from "./salmon";
 
 const salmon = new Salmon<string, string>({
   decay: 0.95,
