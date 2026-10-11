@@ -1,0 +1,19 @@
+{
+  "name": "salmon",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Experimental adaptive frequency-aware key-value data structure",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "benchmark": "bun run benchmark.ts",
+    "demo": "bun run demo.ts",
+    "stress": "bun run stress-test.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

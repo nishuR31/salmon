@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Salmon Performance</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: .25rem; }
+    .muted { opacity: .7; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 1rem; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 1rem; }
+    .bar { display: flex; align-items: center; gap: .5rem; margin: .6rem 0; }
+    .label { width: 80px; }
+    .track { flex: 1; background: #eee; border-radius: 999px; overflow: hidden; height: 18px; }
+    .fill { height: 100%; }
+    .value { width: 130px; text-align: right; font-variant-numeric: tabular-nums; }
+    code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Salmon benchmark</h1>
+  <p class="muted">Loads <code>performance.json</code> from this folder. Open through a small local server if your browser blocks file access.</p>
+  <div id="app">Loading…</div>
+
+<script>
+async function load() {
+  const res = await fetch("performance.json");
+  const data = await res.json();
+  const app = document.querySelector("#app");
+
+  const byWorkload = new Map();
+  for (const row of data.benchmarks) {
+    if (!byWorkload.has(row.workload)) byWorkload.set(row.workload, []);
+    byWorkload.get(row.workload).push(row);
+  }
+
+  const fmt = n => Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const cards = [];
+
+  for (const [workload, rows] of byWorkload) {
+    const max = Math.max(...rows.map(r => r.opsPerSecond), 1);
+    cards.push(`
+      <section class="card">
+        <h2>${workload}</h2>
+        ${rows.map(r => `
+          <div class="bar">
+            <div class="label">${r.structure}</div>
+            <div class="track"><div class="fill" style="width:${(r.opsPerSecond/max)*100}%"></div></div>
+            <div class="value">${fmt(r.opsPerSecond)} ops/s</div>
+          </div>
+          <p>p50 ${fmt(r.p50Ns)} ns · p95 ${fmt(r.p95Ns)} ns · p99 ${fmt(r.p99Ns)} ns</p>
+          <p>promotions ${r.promotions} · demotions ${r.demotions} · reorders ${r.reorders} · comparisons ${r.comparisons}</p>
+        `).join("")}
+      </section>
+    `);
+  }
+
+  app.innerHTML = `
+    <p><strong>N:</strong> ${data.metadata.datasetSize.toLocaleString()} ·
+       <strong>OPS:</strong> ${data.metadata.operations.toLocaleString()}</p>
+    <div class="grid">${cards.join("")}</div>
+  `;
+}
+load().catch(err => {
+  document.querySelector("#app").textContent =
+    "Could not load performance.json. Run a local server, for example: python3 -m http.server";
+});
+</script>
+</body>
+</html>
