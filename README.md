@@ -3,12 +3,15 @@
 Salmon is an experimental, adaptive, frequency-aware key-value data structure and cache engine written in TypeScript.
 
 > [!IMPORTANT]
+>
 > ### Critical Disclaimer: Salmon is NOT a General `Map` Replacement
+>
 > JavaScript's built-in `Map` is executed in native C++ engine intrinsics (V8 / JavaScriptCore) and achieves **~6,000,000 to 8,000,000 ops/sec**. Salmon runs in user-space TypeScript and performs mathematical decay calculation, zone promotion, and doubly-linked list rewiring on access, achieving **~800,000 to 1,200,000 ops/sec**.
 >
 > **Do NOT use Salmon if you only need basic key-value storage.**
 >
 > **DO use Salmon when you need:**
+>
 > - Adaptive frequency learning (automatically discovering hot, warm, and cold keys).
 > - Protection against repeated expensive database/API fetches.
 > - Scan-resistant cache eviction (unlike standard LRU, a single large loop cannot wipe out your hot working set).
@@ -16,8 +19,7 @@ Salmon is an experimental, adaptive, frequency-aware key-value data structure an
 
 The core question Salmon explores is:
 
-> *Can we retain exact O(1) Map lookup while continuously learning which keys are hot, warm, or cold, moving active data to the front and decaying unused data to the back for eviction?*
-
+> _Can we retain exact O(1) Map lookup while continuously learning which keys are hot, warm, or cold, moving active data to the front and decaying unused data to the back for eviction?_
 
 ## Core idea
 
@@ -90,8 +92,8 @@ That is O(n) per access and destroys scalability.
 Salmon instead stores:
 
 ```ts
-hotness
-lastUpdated
+hotness;
+lastUpdated;
 ```
 
 and calculates the current score only when a node is touched:
@@ -337,7 +339,7 @@ This tests whether decay lets Salmon forget yesterday's hot keys and adapt to to
 
 ## Empirical Benchmark Results & Visual Analysis (Optimized v0.3.0)
 
-*Benchmarked on Bun v1.4.3 | N = 50,000 keys | OPS = 300,000 per workload*
+_Benchmarked on Bun v1.4.3 | N = 50,000 keys | OPS = 300,000 per workload_
 
 ### 1. Throughput Comparison (Ops/sec)
 
@@ -371,25 +373,25 @@ Tail Latency (p99):
   Salmon : ~5,967 - 8,132 ns  (Reduced by >60% from v0.2.0)
 ```
 
-| Workload | Structure | Mean Latency | p50 (Median) | p95 (Tail) | p99 (Worst 1%) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Uniform** | `Map` | 124.7 ns | 38.0 ns | 78.0 ns | 96.0 ns |
-| | `Salmon` | 1,050.5 ns | 520.0 ns | 1,717.0 ns | 5,967.0 ns |
-| **Hotspot** | `Map` | 125.5 ns | 42.0 ns | 81.0 ns | 110.0 ns |
-| | `Salmon` | 756.7 ns | 381.0 ns | 1,305.0 ns | 6,381.0 ns |
-| **Zipf** | `Map` | 180.4 ns | 43.0 ns | 85.0 ns | 114.0 ns |
-| | `Salmon` | 1,037.9 ns | 502.0 ns | 1,729.0 ns | 6,811.0 ns |
-| **Phase-Shift** | `Map` | 221.0 ns | 64.0 ns | 112.0 ns | 130.0 ns |
-| | `Salmon` | 1,441.9 ns | 566.0 ns | 2,098.0 ns | 8,132.0 ns |
+| Workload        | Structure | Mean Latency | p50 (Median) | p95 (Tail) | p99 (Worst 1%) |
+| :-------------- | :-------- | :----------- | :----------- | :--------- | :------------- |
+| **Uniform**     | `Map`     | 124.7 ns     | 38.0 ns      | 78.0 ns    | 96.0 ns        |
+|                 | `Salmon`  | 1,050.5 ns   | 520.0 ns     | 1,717.0 ns | 5,967.0 ns     |
+| **Hotspot**     | `Map`     | 125.5 ns     | 42.0 ns      | 81.0 ns    | 110.0 ns       |
+|                 | `Salmon`  | 756.7 ns     | 381.0 ns     | 1,305.0 ns | 6,381.0 ns     |
+| **Zipf**        | `Map`     | 180.4 ns     | 43.0 ns      | 85.0 ns    | 114.0 ns       |
+|                 | `Salmon`  | 1,037.9 ns   | 502.0 ns     | 1,729.0 ns | 6,811.0 ns     |
+| **Phase-Shift** | `Map`     | 221.0 ns     | 64.0 ns      | 112.0 ns   | 130.0 ns       |
+|                 | `Salmon`  | 1,441.9 ns   | 566.0 ns     | 2,098.0 ns | 8,132.0 ns     |
 
 ### 3. Adaptive Telemetry Under Load
 
-| Workload | Hits | Promotions | Demotions | Reorders (Swaps) | Comparisons |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Uniform** | 300,000 | 44,541 | 0 | 1,523,191 | 1,778,572 |
-| **Hotspot** | 300,000 | 8,134 | 0 | 1,826,831 | 2,118,411 |
-| **Zipf** | 300,000 | 44,467 | 0 | 1,594,331 | 1,849,763 |
-| **Phase-Shift** | 300,000 | 22,594 | 0 | 1,873,176 | 2,150,161 |
+| Workload        | Hits    | Promotions | Demotions | Reorders (Swaps) | Comparisons |
+| :-------------- | :------ | :--------- | :-------- | :--------------- | :---------- |
+| **Uniform**     | 300,000 | 44,541     | 0         | 1,523,191        | 1,778,572   |
+| **Hotspot**     | 300,000 | 8,134      | 0         | 1,826,831        | 2,118,411   |
+| **Zipf**        | 300,000 | 44,467     | 0         | 1,594,331        | 1,849,763   |
+| **Phase-Shift** | 300,000 | 22,594     | 0         | 1,873,176        | 2,150,161   |
 
 ### 4. Memory Density & Scale Limits (Stress Test)
 
@@ -426,9 +428,9 @@ import { Salmon } from "./salmon";
 
 const cache = new Salmon<string, UserProfile>({
   maxCapacity: 10_000, // Keep memory bounded
-  decay: 0.99,         // Smooth exponential forgetting
-  warmThreshold: 3,    // Promotes after ~3 repeated queries
-  hotThreshold: 10,    // Hard-hot active working set
+  decay: 0.99, // Smooth exponential forgetting
+  warmThreshold: 3, // Promotes after ~3 repeated queries
+  hotThreshold: 10, // Hard-hot active working set
 });
 
 // Cache-aside helper: resolves cache hit or fetches from DB
@@ -443,25 +445,25 @@ const user = await cache.fetch(`user:${userId}`, async () => {
 ### 2. High-Frequency Market Data & Order Book Caching
 
 In financial exchanges or crypto order routing, 2% of liquid tickers (BTC, ETH, AAPL, NVDA) receive 90% of updates, while thousands of long-tail assets are rarely touched:
+
 - Salmon isolates high-frequency tickers in the `HOT` tier.
 - Low-volume tickers naturally decay to `COLD` without any manual timer or worker threads.
 
 ### 3. API Gateway Rate-Limiting & Session Clustering
 
 Tracking active IP addresses and client sessions:
+
 - Active clients stay hot in memory with sub-microsecond lookup.
 - Dormant clients automatically sink backwards and can be pruned by calling `cache.evict()`.
 
 ### 4. Why Salmon vs LRU vs LFU?
 
-| Feature | Standard LRU | Standard LFU | Salmon |
-| :--- | :--- | :--- | :--- |
-| **Scan Resistance** | No (single large loop flushes entire cache) | Yes | **Yes** (single access only grants +1 score) |
-| **Pollution by Stale Hot Keys** | Forgets quickly | No (stale hot keys stay forever) | **Solves via lazy exponential decay** |
-| **Decay Maintenance Cost** | N/A | High (O(N) background sweep) | **O(1) lazy decay on touched nodes** |
-| **Eviction Precision** | Time-only | Frequency-only | **Hybrid Recency + Frequency** |
-
-
+| Feature                         | Standard LRU                                | Standard LFU                     | Salmon                                       |
+| :------------------------------ | :------------------------------------------ | :------------------------------- | :------------------------------------------- |
+| **Scan Resistance**             | No (single large loop flushes entire cache) | Yes                              | **Yes** (single access only grants +1 score) |
+| **Pollution by Stale Hot Keys** | Forgets quickly                             | No (stale hot keys stay forever) | **Solves via lazy exponential decay**        |
+| **Decay Maintenance Cost**      | N/A                                         | High (O(N) background sweep)     | **O(1) lazy decay on touched nodes**         |
+| **Eviction Precision**          | Time-only                                   | Frequency-only                   | **Hybrid Recency + Frequency**               |
 
 ## Why the benchmark matters
 
@@ -517,7 +519,7 @@ In v0.3.0, Salmon underwent rigorous profiling to reduce user-space JS overhead,
 
 Salmon was developed, architected, and optimized using **AI as a pair-programming and research assistant**.
 
-- **Human Architectural Intent:** The developer formulated the original vision: *"solve repeated data fetching by moving active data to the front for instant access while allowing inactive data to decay to the back for clean eviction."*
+- **Human Architectural Intent:** The developer formulated the original vision: _"solve repeated data fetching by moving active data to the front for instant access while allowing inactive data to decay to the back for clean eviction."_
 - **AI as an Engineering Tool:**
   - Deriving the geometric convergence limits ($maxHotness = \frac{1}{1 - decay}$) to prevent mathematically unreachable threshold bugs.
   - Designing comprehensive structural invariant suites (`validateStructure()`) and randomized adversarial fuzz tests.
@@ -525,38 +527,3 @@ Salmon was developed, architected, and optimized using **AI as a pair-programmin
   - Formulating clean cache-aside patterns (`fetch`, `getOrSet`, and `maxCapacity` cold-tail eviction).
 
 The design decisions, experimental evaluations, tradeoffs, and production boundary testing reflect disciplined engineering where AI accelerates development without substituting for rigorous benchmarking.
-
-## What you should be able to explain
-
-Before treating Salmon as "your" data structure, you should be able to answer these without looking at the code:
-
-1. Why does Salmon need a Map?
-2. Why does it also need a linked list?
-3. Why must the linked list not be used for lookup?
-4. What does `hotness` represent?
-5. Why is decay lazy?
-6. What happens when a node crosses `warmThreshold`?
-7. What happens when it crosses `hotThreshold`?
-8. Why can a node move backward?
-9. Why can one `get()` perform more than one swap?
-10. Why is Salmon not automatically faster than `Map`?
-11. What workload should make Salmon useful?
-12. Why does `decay=0.95` make a threshold of `20` unreachable?
-
-If you can answer those, you understand the design rather than merely possessing the code.
-
-## Project files
-
-```text
-salmon/
-├── salmon.ts        # Core data structure & adaptive logic
-├── index.ts         # Module package entrypoint re-export
-├── salmon.test.ts   # Unit & invariant test suite
-├── demo.ts
-├── benchmark.ts
-├── performance.json
-├── performance-graph.html
-├── package.json
-├── tsconfig.json
-└── README.md
-```
